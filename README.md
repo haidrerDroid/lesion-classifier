@@ -1,36 +1,67 @@
-# Skin Disease Detection
+<p align="center">
+  <img src="assets/project-banner.svg" alt="Lesion Lens — skin-lesion image classification research prototype" width="100%">
+</p>
 
-A research prototype for classifying dermoscopic skin-lesion images into six categories. The project includes training scripts, single-image prediction, and a Streamlit interface.
+<p align="center">
+  <a href="https://github.com/haidrerDroid/lesion-classifier/actions/workflows/tests.yml"><img src="https://github.com/haidrerDroid/lesion-classifier/actions/workflows/tests.yml/badge.svg?branch=main" alt="Tests"></a>
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10 or newer">
+  <img src="https://img.shields.io/badge/PyTorch-models-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch">
+  <img src="https://img.shields.io/badge/Streamlit-interface-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
+</p>
 
-> **Important:** This software is for research and educational use only. It is not a medical device and must not be used to diagnose, treat, or rule out any condition. Consult a qualified healthcare professional for medical advice.
+<p align="center">
+  A research prototype for training, evaluating, and exploring six-class skin-lesion image classifiers.
+</p>
 
-## Results
+> **Research and education only.** This project is not a medical device and must not be used to diagnose, treat, or rule out any condition. Its predictions can be wrong; consult a qualified healthcare professional for medical advice.
 
-The figure below is the confusion matrix from a recorded ResNet18 baseline test run. It summarizes predictions across 421 held-out images; results will vary with the dataset, split, and training configuration.
+## At a glance
 
-| Evaluation metric | Recorded result |
-| --- | ---: |
-| Balanced accuracy | 0.690 |
-| Macro F1-score | 0.692 |
-| Test images | 421 |
+| | |
+| --- | --- |
+| **Task** | Classify dermoscopic images into six lesion categories |
+| **Models** | ResNet18 baseline and ResNet18 + EfficientNet-B0 ensemble |
+| **Interface** | Local Streamlit app for image upload and camera capture |
+| **Data and weights** | Not included; provide a dataset and train checkpoints locally |
 
-![Confusion matrix for the recorded ResNet18 baseline test run](assets/confusion_matrix.png)
+### Navigate
 
-Rows show the true class and columns show the predicted class. Counts on the diagonal are correct predictions.
+[Results](#recorded-baseline-results) · [Features](#what-it-includes) · [Setup](#get-started) · [Dataset](#2-prepare-a-dataset) · [Training](#3-train-a-model) · [Prediction](#predict-one-image) · [Web app](#launch-the-web-interface) · [Development](#development)
 
-## Project contents
+## Recorded baseline results
 
-- `train_model.py` — train and evaluate the ResNet18 baseline.
-- `train_ensemble.py` — train a ResNet18 and EfficientNet-B0 probability ensemble.
-- `predict.py` — run prediction for one image using a trained ResNet18 checkpoint.
-- `app.py` — launch the Streamlit image interface.
-- `assets/confusion_matrix.png` — confusion matrix from the recorded baseline evaluation.
+The confusion matrix below is from a recorded ResNet18 baseline test run on 421 held-out images. Results depend on the dataset, split, and training configuration; this result is not a guarantee of future performance.
 
-Dataset files, trained checkpoints, and generated training artifacts are intentionally not included.
+<p align="center">
+  <img src="assets/confusion_matrix.png" alt="Confusion matrix showing true and predicted labels across six skin-lesion classes" width="86%">
+</p>
 
-## Requirements and installation
+<p align="center">
+  <strong>Balanced accuracy: 0.690</strong>
+  &nbsp; · &nbsp;
+  <strong>Macro F1-score: 0.692</strong>
+  &nbsp; · &nbsp;
+  <strong>Held-out images: 421</strong>
+</p>
 
-Python 3.10 or newer is recommended. Create a virtual environment and install the project dependencies:
+Rows represent true classes; columns represent predicted classes. Diagonal cells are correct predictions. These are saved baseline results, not results generated during repository setup.
+
+## What it includes
+
+| File | Purpose |
+| --- | --- |
+| [`train_model.py`](train_model.py) | Train and evaluate a ResNet18 baseline |
+| [`train_ensemble.py`](train_ensemble.py) | Train a ResNet18 + EfficientNet-B0 probability ensemble |
+| [`predict.py`](predict.py) | Predict classes for one image using a trained baseline checkpoint |
+| [`app.py`](app.py) | Launch the Streamlit image interface |
+| [`assets/`](assets/) | Repository banner and recorded baseline confusion matrix |
+| [`tests/`](tests/) | Unit tests for data handling, lesion-safe splits, metrics, and plots |
+
+## Get started
+
+### 1. Install dependencies
+
+Python 3.10 or newer is recommended.
 
 ```bash
 python3 -m venv .venv
@@ -39,23 +70,9 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-The first training run downloads pretrained model weights. On Apple Silicon, PyTorch may use the MPS accelerator when available.
+### 2. Prepare a dataset
 
-## Development checks
-
-Install the development dependencies and run the same checks used by GitHub Actions:
-
-```bash
-python -m pip install -r requirements-dev.txt
-ruff check --select E4,E7,E9,F .
-python -m pytest
-```
-
-The workflow runs linting and tests on Python 3.10 and 3.12 for pushes to `main`, pull requests, and manual runs.
-
-## Dataset
-
-Obtain an appropriate skin-lesion dataset and confirm its terms of use before using it. Place the metadata CSV and matching images in this layout:
+Dataset files are intentionally not included. Obtain an appropriate dataset and review its terms before use. The training scripts expect:
 
 ```text
 ISIC-images/
@@ -65,42 +82,50 @@ ISIC-images/
     └── ...
 ```
 
-The training scripts use `ISIC-images/` by default. To use a different directory, pass `--data-dir`.
+The metadata must include `image_id`, `dx`, and `lesion_id` columns. Supported image extensions are `.jpg`, `.jpeg`, and `.png`. To use another directory, pass `--data-dir`.
 
-## Train and evaluate
+### 3. Train a model
 
-Train the baseline model:
+Train the baseline:
 
 ```bash
 python train_model.py --epochs 10
 ```
 
-The script validates labels, removes repeated image IDs, keeps images from the same lesion together, creates stratified train/validation/test splits, and trains with class-weighted loss. It calibrates the malignant-risk threshold on the validation split and evaluates on the held-out test split.
-
-Train the probability ensemble instead:
+Or train the probability ensemble:
 
 ```bash
 python train_ensemble.py --epochs 10 --batch-size 32
 ```
 
-Training outputs are written to `artifacts/`, including model checkpoints, evaluation metrics, split CSVs, and a generated confusion matrix. These files are ignored by Git.
+Training outputs—including model weights, split files, metrics, and generated plots—are written under `artifacts/` and are ignored by Git. The first run may download pretrained weights. On Apple Silicon, PyTorch uses MPS when available.
 
-## Predict an image
+## Predict one image
 
-After training the baseline:
+After training the baseline, run:
 
 ```bash
 python predict.py ISIC-images/Images/<image_id>.jpg
 ```
 
-The predictor loads `artifacts/best_model.pt` by default. Pass `--model` to select another checkpoint.
+The predictor loads `artifacts/best_model.pt` by default; use `--model` to specify another baseline checkpoint. The six output labels are `akiec`, `bcc`, `bkl`, `df`, `mel`, and `vasc`.
 
-The supported classes are `akiec`, `bcc`, `bkl`, `df`, `mel`, and `vasc`.
-
-## Run the web interface
+## Launch the web interface
 
 ```bash
 streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit. The interface accepts an image upload or a camera capture (with browser permission). When available, it prefers `artifacts/ensemble_model.pt` and otherwise uses `artifacts/best_model.pt`. It displays an estimated risk grouping and may warn about small or low-contrast images; these outputs are not a diagnosis.
+Open the local URL printed by Streamlit. The interface accepts an image upload or camera capture (with browser permission). It uses `artifacts/ensemble_model.pt` when present and otherwise falls back to `artifacts/best_model.pt`. A checkpoint must be trained before using the app.
+
+## Development
+
+Install development tools and run the same checks as GitHub Actions:
+
+```bash
+python -m pip install -r requirements-dev.txt
+ruff check --select E4,E7,E9,F .
+python -m pytest
+```
+
+GitHub Actions runs linting and tests on Python 3.10 and 3.12 for pushes to `main`, pull requests, and manual runs.
