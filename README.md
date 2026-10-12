@@ -1,10 +1,36 @@
-# Skin Disease Detection Baseline
+# Skin Disease Detection
 
-This project trains a six-class image classifier from an ISIC-style skin-lesion dataset. Dataset files and trained model artifacts are not included in this repository.
+A research prototype for classifying dermoscopic skin-lesion images into six categories. The project includes training scripts, single-image prediction, and a Streamlit interface.
 
-## Setup
+> **Important:** This software is for research and educational use only. It is not a medical device and must not be used to diagnose, treat, or rule out any condition. Consult a qualified healthcare professional for medical advice.
 
-Create and activate a virtual environment, then install the dependencies:
+## Results
+
+The figure below is the confusion matrix from a recorded ResNet18 baseline test run. It summarizes predictions across 421 held-out images; results will vary with the dataset, split, and training configuration.
+
+| Evaluation metric | Recorded result |
+| --- | ---: |
+| Balanced accuracy | 0.690 |
+| Macro F1-score | 0.692 |
+| Test images | 421 |
+
+![Confusion matrix for the recorded ResNet18 baseline test run](assets/confusion_matrix.png)
+
+Rows show the true class and columns show the predicted class. Counts on the diagonal are correct predictions.
+
+## Project contents
+
+- `train_model.py` — train and evaluate the ResNet18 baseline.
+- `train_ensemble.py` — train a ResNet18 and EfficientNet-B0 probability ensemble.
+- `predict.py` — run prediction for one image using a trained ResNet18 checkpoint.
+- `app.py` — launch the Streamlit image interface.
+- `assets/confusion_matrix.png` — confusion matrix from the recorded baseline evaluation.
+
+Dataset files, trained checkpoints, and generated training artifacts are intentionally not included.
+
+## Requirements and installation
+
+Python 3.10 or newer is recommended. Create a virtual environment and install the project dependencies:
 
 ```bash
 python3 -m venv .venv
@@ -13,62 +39,56 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
+The first training run downloads pretrained model weights. On Apple Silicon, PyTorch may use the MPS accelerator when available.
+
 ## Dataset
 
-Obtain the dataset and confirm its terms of use before using or redistributing it. Place `metadata.csv` and the corresponding image files in this local layout:
+Obtain an appropriate skin-lesion dataset and confirm its terms of use before using it. Place the metadata CSV and matching images in this layout:
 
 ```text
 ISIC-images/
-	metadata.csv
-	Images/
-		<image_id>.jpg
+├── metadata.csv
+└── Images/
+    ├── <image_id>.jpg
+    └── ...
 ```
 
-The training scripts read from `ISIC-images` by default. Use `--data-dir` to specify a different location.
+The training scripts use `ISIC-images/` by default. To use a different directory, pass `--data-dir`.
 
 ## Train and evaluate
 
-From the project directory, run:
+Train the baseline model:
 
 ```bash
 python train_model.py --epochs 10
 ```
 
-The script validates duplicate labels, removes repeated image IDs, keeps images from the same lesion together, creates stratified train/validation/test CSV files, trains a pretrained ResNet18, and uses class-weighted loss for imbalanced labels. It calibrates the malignant-risk threshold on the validation split and evaluates that risk grouping on the untouched test split.
+The script validates labels, removes repeated image IDs, keeps images from the same lesion together, creates stratified train/validation/test splits, and trains with class-weighted loss. It calibrates the malignant-risk threshold on the validation split and evaluates on the held-out test split.
 
-Generated files are placed in `artifacts/`:
-
-- `best_model.pt`: best validation macro-F1 checkpoint
-- `test_metrics.json`: balanced accuracy, macro-F1, and per-class metrics
-- `confusion_matrix.png`: test-set confusion matrix
-- `splits/*.csv`: reproducible data splits
-
-The first run downloads pretrained ResNet18 weights. On an Apple Silicon Mac, the script uses the MPS accelerator when available.
-
-## Predict one image
-
-After training:
+Train the probability ensemble instead:
 
 ```bash
-python predict.py ISIC-images/Images/ISIC_0000031.jpg
+python train_ensemble.py --epochs 10 --batch-size 32
 ```
 
-The model predicts `akiec`, `bcc`, `bkl`, `df`, `mel`, or `vasc`. These predictions are for research or education and must not be used as a medical diagnosis.
+Training outputs are written to `artifacts/`, including model checkpoints, evaluation metrics, split CSVs, and a generated confusion matrix. These files are ignored by Git.
 
-## Train the ensemble
+## Predict an image
 
-The project includes a probability ensemble using ResNet18 and EfficientNet-B0. Both models use the same lesion-level splits; their six-class probabilities are averaged before risk and unsupported-image checks.
+After training the baseline:
 
 ```bash
-python train_ensemble.py --epochs 10 --batch-size 64
+python predict.py ISIC-images/Images/<image_id>.jpg
 ```
 
-This creates `artifacts/ensemble_model.pt` and `artifacts/ensemble_metrics.json`. The app automatically prefers this ensemble when the file exists and otherwise falls back to `artifacts/best_model.pt`.
+The predictor loads `artifacts/best_model.pt` by default. Pass `--model` to select another checkpoint.
 
-## Run the image interface
+The supported classes are `akiec`, `bcc`, `bkl`, `df`, `mel`, and `vasc`.
+
+## Run the web interface
 
 ```bash
 streamlit run app.py
 ```
 
-Then open the local URL shown in the terminal. The interface accepts an uploaded image or a photo captured with the device camera; camera access requires browser permission. It combines the probabilities of `mel`, `bcc`, and `akiec` into the displayed malignant-risk estimate, uses an uncertainty band around the calibrated threshold, and warns about very small or low-contrast images. This is a research prototype, not a medical diagnostic tool.
+Open the local URL printed by Streamlit. The interface accepts an image upload or a camera capture (with browser permission). When available, it prefers `artifacts/ensemble_model.pt` and otherwise uses `artifacts/best_model.pt`. It displays an estimated risk grouping and may warn about small or low-contrast images; these outputs are not a diagnosis.
