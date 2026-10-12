@@ -31,7 +31,6 @@ from torchvision.models import (
 from train_model import (
     LesionDataset,
     build_transforms,
-    collect_features,
     load_records,
     make_splits,
     set_seed,

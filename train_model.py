@@ -70,6 +70,7 @@ def load_records(data_dir: Path) -> pd.DataFrame:
         )
 
     metadata = metadata.drop_duplicates(subset="image_id", keep="first").copy()
+    metadata = metadata.dropna(subset=["dx"])
     image_paths = {
         path.stem: path
         for path in image_dir.iterdir()
@@ -83,8 +84,7 @@ def load_records(data_dir: Path) -> pd.DataFrame:
             f"Missing {len(missing_ids)} image files, including {missing_ids[:5]}"
         )
 
-    metadata = metadata.dropna(subset=["dx"]).reset_index(drop=True)
-    return metadata
+    return metadata.reset_index(drop=True)
 
 
 def make_splits(records: pd.DataFrame, seed: int) -> dict[str, pd.DataFrame]:

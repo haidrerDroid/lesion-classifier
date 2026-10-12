@@ -41,6 +41,18 @@ python -m pip install -r requirements.txt
 
 The first training run downloads pretrained model weights. On Apple Silicon, PyTorch may use the MPS accelerator when available.
 
+## Development checks
+
+Install the development dependencies and run the same checks used by GitHub Actions:
+
+```bash
+python -m pip install -r requirements-dev.txt
+ruff check --select E4,E7,E9,F .
+python -m pytest
+```
+
+The workflow runs linting and tests on Python 3.10 and 3.12 for pushes to `main`, pull requests, and manual runs.
+
 ## Dataset
 
 Obtain an appropriate skin-lesion dataset and confirm its terms of use before using it. Place the metadata CSV and matching images in this layout:
